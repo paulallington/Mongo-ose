@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.local
+server/data/connections.json
+client/dist/
+.DS_Store
+Thumbs.db
+.claude/
+.claudes/
