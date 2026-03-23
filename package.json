@@ -1,6 +1,6 @@
 {
   "name": "mongo-ose",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Mongo-ose - Lightweight MongoDB management tool",
   "scripts": {
