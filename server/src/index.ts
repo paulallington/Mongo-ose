@@ -32,7 +32,7 @@ app.use('/api/export', exportRouter);
 app.use('/api/import', importRouter);
 
 // In production, serve the client static files
-const clientDist = path.resolve(__dirname, '..', '..', 'client', 'dist');
+const clientDist = config.clientDist;
 app.use(express.static(clientDist));
 app.get('*', (_req, res, next) => {
   // Only serve index.html for non-API routes (SPA fallback)
@@ -50,8 +50,15 @@ app.get('*', (_req, res, next) => {
 // Error handler (must be after all routes)
 app.use(errorHandler);
 
-const server = app.listen(config.port, () => {
-  console.log(`Mongo-ose server running on http://localhost:${config.port}`);
+const server = app.listen(config.port, async () => {
+  const url = `http://localhost:${config.port}`;
+  console.log(`Mongo-ose server running on ${url}`);
+
+  // Auto-open browser unless --no-open flag is passed
+  if (!process.argv.includes('--no-open')) {
+    const open = (await import('open')).default;
+    open(url);
+  }
 });
 
 // Graceful shutdown

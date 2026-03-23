@@ -181,4 +181,92 @@ router.delete('/:connectionId/:db/:col/delete', async (req: Request, res: Respon
   }
 });
 
+// POST /:connectionId/:db/:col/scan-fields - scan collection fields & types
+router.post('/:connectionId/:db/:col/scan-fields', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const client = connectionManager.getClient(connectionId);
+    const collection = client.db(db).collection(col);
+
+    // Sample up to 100 documents
+    const sample = await collection.find({}).limit(100).toArray();
+
+    // Track field types: path -> { typeName -> count }
+    const fieldTypes = new Map<string, Map<string, number>>();
+
+    function detectType(value: unknown): string {
+      if (value === null || value === undefined) return 'null';
+      if (value instanceof ObjectId) return 'objectId';
+      if (value instanceof Date) return 'date';
+      if (typeof value === 'boolean') return 'boolean';
+      if (typeof value === 'number') return 'number';
+      if (typeof value === 'string') return 'string';
+      if (Array.isArray(value)) return 'array';
+      if (typeof value === 'object') {
+        const obj = value as Record<string, unknown>;
+        // Check for EJSON types
+        if ('$oid' in obj) return 'objectId';
+        if ('$date' in obj) return 'date';
+        if ('$numberLong' in obj || '$numberInt' in obj) return 'number';
+        if ('$numberDouble' in obj || '$numberDecimal' in obj) return 'number';
+        if ('$binary' in obj) return 'binary';
+        if ('$regex' in obj) return 'regex';
+        if ('$timestamp' in obj) return 'timestamp';
+        return 'object';
+      }
+      return 'unknown';
+    }
+
+    function scanObject(obj: Record<string, unknown>, prefix: string) {
+      for (const [key, value] of Object.entries(obj)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        const type = detectType(value);
+
+        if (!fieldTypes.has(path)) {
+          fieldTypes.set(path, new Map());
+        }
+        const counts = fieldTypes.get(path)!;
+        counts.set(type, (counts.get(type) || 0) + 1);
+
+        // Recurse into nested objects (but not arrays or special EJSON types)
+        if (type === 'object' && value && typeof value === 'object' && !Array.isArray(value)) {
+          const v = value as Record<string, unknown>;
+          const hasSpecialKeys = Object.keys(v).some(k => k.startsWith('$'));
+          if (!hasSpecialKeys) {
+            scanObject(v, path);
+          }
+        }
+      }
+    }
+
+    for (const doc of sample) {
+      scanObject(doc as Record<string, unknown>, '');
+    }
+
+    // Build result: pick predominant type for each field
+    const fields: { name: string; path: string; type: string }[] = [];
+
+    for (const [path, counts] of fieldTypes.entries()) {
+      let maxType = 'unknown';
+      let maxCount = 0;
+      for (const [type, count] of counts.entries()) {
+        if (type !== 'null' && count > maxCount) {
+          maxCount = count;
+          maxType = type;
+        }
+      }
+      const name = path.includes('.') ? path.split('.').pop()! : path;
+      fields.push({ name, path, type: maxType });
+    }
+
+    fields.sort((a, b) => a.path.localeCompare(b.path));
+
+    res.json({ fields });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

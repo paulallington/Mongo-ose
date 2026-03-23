@@ -219,6 +219,9 @@ export function DocumentViewer({
         onReset={handleResetQuery}
         count={total}
         loading={loading}
+        connectionId={connectionId}
+        db={db}
+        collection={collection}
       />
 
       <div className="document-viewer">
@@ -274,6 +277,7 @@ export function DocumentViewer({
           total={total}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
+          onRefresh={onRefresh}
         />
       </div>
 

@@ -634,6 +634,17 @@ export function DocumentTable({
                       className={col === '_id' ? 'doc-table__cell--id' : className}
                       title={typeof doc[col] === 'object' && doc[col] !== null ? JSON.stringify(doc[col], null, 2) : String(doc[col] ?? '')}
                       onDoubleClick={(e) => handleCellDoubleClick(doc, col, e)}
+                      draggable
+                      onDragStart={(e) => {
+                        const cellType = getCellType(doc[col]);
+                        const displayValue = col === '_id' ? extractId(doc._id) : text;
+                        e.dataTransfer.setData('application/x-mongoose-cell', JSON.stringify({
+                          field: col,
+                          value: displayValue,
+                          type: cellType,
+                        }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
                     >
                       <TypeBadge value={doc[col]} />
                       {col === '_id' ? extractId(doc._id) : text}

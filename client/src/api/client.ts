@@ -1,4 +1,4 @@
-import type { SavedConnection, DatabaseInfo, CollectionInfo, CollectionStats, IndexInfo } from '../types/index.js';
+import type { SavedConnection, DatabaseInfo, CollectionInfo, CollectionStats, IndexInfo, FieldInfo } from '../types/index.js';
 
 const BASE = '/api';
 
@@ -70,6 +70,8 @@ export const api = {
       method: 'DELETE',
       body: JSON.stringify({ ids }),
     }),
+  scanFields: (connId: string, db: string, col: string) =>
+    request<{ fields: FieldInfo[] }>(`/documents/${connId}/${db}/${col}/scan-fields`, { method: 'POST' }),
 
   // Indexes
   getIndexes: (connId: string, db: string, col: string) =>

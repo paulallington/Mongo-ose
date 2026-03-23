@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a2a"/>
+      <stop offset="100%" style="stop-color:#0d1f17"/>
+    </linearGradient>
+    <linearGradient id="mongoose" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80"/>
+      <stop offset="100%" style="stop-color:#22c55e"/>
+    </linearGradient>
+    <linearGradient id="tail" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="60%" style="stop-color:#16a34a"/>
+      <stop offset="100%" style="stop-color:#15803d"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- Mongoose body - stylized standing mongoose silhouette -->
+  <!-- Main body / torso - upright alert pose -->
+  <path d="M 240 400
+           C 240 400 228 360 230 320
+           C 232 280 238 250 240 230
+           C 242 210 240 190 236 175
+           C 232 160 226 148 224 135
+           C 222 120 228 105 240 95
+           C 248 88 258 85 268 88
+           C 278 91 284 100 286 112
+           C 288 124 284 138 278 152
+           C 272 166 268 180 268 200
+           C 268 220 272 250 276 280
+           C 280 310 282 360 280 400
+           Z"
+        fill="url(#mongoose)" opacity="0.95"/>
+
+  <!-- Head -->
+  <ellipse cx="260" cy="88" rx="30" ry="24" fill="url(#mongoose)" opacity="0.95"/>
+
+  <!-- Snout -->
+  <ellipse cx="260" cy="102" rx="14" ry="10" fill="#6ee7a0" opacity="0.9"/>
+
+  <!-- Ears -->
+  <ellipse cx="242" cy="68" rx="10" ry="14" fill="#4ade80" transform="rotate(-15 242 68)" opacity="0.9"/>
+  <ellipse cx="278" cy="68" rx="10" ry="14" fill="#4ade80" transform="rotate(15 278 68)" opacity="0.9"/>
+
+  <!-- Inner ears -->
+  <ellipse cx="242" cy="70" rx="5" ry="8" fill="#166534" transform="rotate(-15 242 70)" opacity="0.5"/>
+  <ellipse cx="278" cy="70" rx="5" ry="8" fill="#166534" transform="rotate(15 278 70)" opacity="0.5"/>
+
+  <!-- Eyes -->
+  <circle cx="250" cy="84" r="4" fill="#0d1f17"/>
+  <circle cx="270" cy="84" r="4" fill="#0d1f17"/>
+  <circle cx="251" cy="83" r="1.5" fill="#fff" opacity="0.8"/>
+  <circle cx="271" cy="83" r="1.5" fill="#fff" opacity="0.8"/>
+
+  <!-- Nose -->
+  <ellipse cx="260" cy="96" rx="4" ry="3" fill="#166534" opacity="0.7"/>
+
+  <!-- Tail - long curved tail characteristic of a mongoose -->
+  <path d="M 270 380
+           C 290 360 330 330 350 290
+           C 370 250 375 210 360 180
+           C 350 160 335 155 325 165
+           C 315 175 320 195 330 220
+           C 340 245 338 275 320 310
+           C 302 345 285 365 275 390"
+        fill="none" stroke="url(#tail)" stroke-width="18" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Front paws -->
+  <ellipse cx="244" cy="405" rx="16" ry="8" fill="#4ade80" opacity="0.9"/>
+  <ellipse cx="276" cy="405" rx="16" ry="8" fill="#4ade80" opacity="0.9"/>
+
+  <!-- Subtle chest stripe -->
+  <path d="M 252 140 C 254 170 254 200 256 240 C 258 200 260 170 262 140"
+        fill="#6ee7a0" opacity="0.3"/>
+
+  <!-- MongoDB-style leaf accent at the base -->
+  <path d="M 258 418 C 258 428 256 445 260 455 C 264 445 262 428 262 418 Z"
+        fill="#15803d" opacity="0.7"/>
+</svg>
