@@ -3,6 +3,7 @@ export interface SavedConnection {
   name: string;
   connectionString: string;
   color?: string;
+  group?: string;
   createdAt: string;
 }
 
@@ -21,7 +22,8 @@ export interface CollectionStats {
   documentCount: number;
   storageSize: number;
   indexCount: number;
-  avgDocSize: number;
+  avgObjSize: number;
+  totalIndexSize?: number;
 }
 
 export interface IndexInfo {

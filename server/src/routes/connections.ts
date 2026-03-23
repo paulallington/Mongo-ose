@@ -16,12 +16,12 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
 // POST / - create a new saved connection
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, connectionString, color } = req.body;
+    const { name, connectionString, color, group } = req.body;
     if (!name || !connectionString) {
       res.status(400).json({ error: 'name and connectionString are required' });
       return;
     }
-    const conn = await connectionManager.saveConnection({ name, connectionString, color });
+    const conn = await connectionManager.saveConnection({ name, connectionString, color, group });
     res.status(201).json(conn);
   } catch (err) {
     next(err);
@@ -113,6 +113,32 @@ router.post('/:id/disconnect', async (req: Request, res: Response, next: NextFun
 router.get('/:id/status', (req: Request, res: Response) => {
   const id = req.params.id as string;
   res.json({ connected: connectionManager.isConnected(id) });
+});
+
+// GET /:id/server-info - return server info for an active connection
+router.get('/:id/server-info', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const client = connectionManager.getClient(id);
+    const admin = client.db('admin');
+
+    const [buildInfo, serverStatus] = await Promise.all([
+      admin.command({ buildInfo: 1 }),
+      admin.command({ serverStatus: 1 }).catch(() => null),
+    ]);
+
+    res.json({
+      version: buildInfo.version,
+      gitVersion: buildInfo.gitVersion,
+      modules: buildInfo.modules ?? [],
+      os: serverStatus?.host ?? null,
+      uptime: serverStatus?.uptime ?? null,
+      connections: serverStatus?.connections ?? null,
+      storageEngine: serverStatus?.storageEngine?.name ?? null,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

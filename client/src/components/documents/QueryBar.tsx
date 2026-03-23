@@ -1,5 +1,36 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { VisualQueryBuilder } from './VisualQueryBuilder.js';
+import { ExplainDialog } from './ExplainDialog.js';
+
+interface QueryHistoryEntry {
+  filter: string;
+  sort: string;
+  projection: string;
+  timestamp: number;
+}
+
+const MAX_HISTORY = 20;
+
+function getHistoryKey(connectionId: string, db: string, collection: string): string {
+  return `mongoose-query-history:${connectionId}:${db}:${collection}`;
+}
+
+function loadHistory(connectionId: string, db: string, collection: string): QueryHistoryEntry[] {
+  try {
+    const data = localStorage.getItem(getHistoryKey(connectionId, db, collection));
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(connectionId: string, db: string, collection: string, entries: QueryHistoryEntry[]) {
+  try {
+    localStorage.setItem(getHistoryKey(connectionId, db, collection), JSON.stringify(entries.slice(0, MAX_HISTORY)));
+  } catch {
+    // localStorage full or unavailable
+  }
+}
 
 interface QueryBarProps {
   onExecute: (filter: string, sort: string, projection: string) => void;
@@ -16,10 +47,45 @@ export function QueryBar({ onExecute, onReset, count, loading, connectionId, db,
   const [sort, setSort] = useState('');
   const [projection, setProjection] = useState('');
   const [mode, setMode] = useState<'json' | 'visual'>('visual');
+  const [showExplain, setShowExplain] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
+  const [historyPos, setHistoryPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const historyRef = useRef<HTMLDivElement>(null);
+  const historyBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Load history when collection changes
+  useEffect(() => {
+    setHistory(loadHistory(connectionId, db, collection));
+  }, [connectionId, db, collection]);
+
+  // Close history dropdown on outside click
+  useEffect(() => {
+    if (!showHistory) return;
+    const handler = (e: MouseEvent) => {
+      if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showHistory]);
 
   const handleFind = useCallback(() => {
     onExecute(filter, sort, projection);
-  }, [filter, sort, projection, onExecute]);
+    // Save to history if there's a non-empty filter/sort/projection
+    if (filter.trim() || sort.trim() || projection.trim()) {
+      const entry: QueryHistoryEntry = {
+        filter, sort, projection,
+        timestamp: Date.now(),
+      };
+      const updated = [entry, ...history.filter(h =>
+        h.filter !== filter || h.sort !== sort || h.projection !== projection
+      )].slice(0, MAX_HISTORY);
+      setHistory(updated);
+      saveHistory(connectionId, db, collection, updated);
+    }
+  }, [filter, sort, projection, onExecute, history, connectionId, db, collection]);
 
   const handleReset = useCallback(() => {
     setFilter('');
@@ -28,10 +94,40 @@ export function QueryBar({ onExecute, onReset, count, loading, connectionId, db,
     onReset();
   }, [onReset]);
 
+  const handleRecall = useCallback((entry: QueryHistoryEntry) => {
+    setFilter(entry.filter);
+    setSort(entry.sort);
+    setProjection(entry.projection);
+    setShowHistory(false);
+    // Auto-switch to JSON mode to show the recalled query
+    setMode('json');
+  }, []);
+
+  const handleClearHistory = useCallback(() => {
+    setHistory([]);
+    saveHistory(connectionId, db, collection, []);
+    setShowHistory(false);
+  }, [connectionId, db, collection]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       handleFind();
     }
+  };
+
+  const formatTimestamp = (ts: number) => {
+    const d = new Date(ts);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const summarizeQuery = (entry: QueryHistoryEntry) => {
+    const parts: string[] = [];
+    if (entry.filter && entry.filter.trim()) parts.push(entry.filter.trim());
+    if (entry.sort && entry.sort.trim()) parts.push(`sort: ${entry.sort.trim()}`);
+    if (entry.projection && entry.projection.trim()) parts.push(`proj: ${entry.projection.trim()}`);
+    const summary = parts.join(' | ');
+    if (!summary) return '(empty query)';
+    return summary.length > 120 ? summary.substring(0, 117) + '...' : summary;
   };
 
   return (
@@ -113,6 +209,46 @@ export function QueryBar({ onExecute, onReset, count, loading, connectionId, db,
           {loading ? <span className="spinner spinner--sm" /> : null}
           Find
         </button>
+        <button className="btn btn--ghost btn--sm" onClick={() => setShowExplain(true)} title="Explain Plan">
+          Explain
+        </button>
+        <div className="query-bar__history-wrapper" ref={historyRef}>
+          <button
+            ref={historyBtnRef}
+            className="btn btn--ghost btn--sm"
+            onClick={() => {
+              if (!showHistory && historyBtnRef.current) {
+                const rect = historyBtnRef.current.getBoundingClientRect();
+                setHistoryPos({ top: rect.bottom + 4, left: Math.max(8, rect.right - 440) });
+              }
+              setShowHistory(!showHistory);
+            }}
+            title="Query History"
+            disabled={history.length === 0}
+          >
+            History {history.length > 0 ? `(${history.length})` : ''}
+          </button>
+          {showHistory && history.length > 0 && (
+            <div className="query-bar__history-dropdown" style={{ top: historyPos.top, left: historyPos.left }}>
+              <div className="query-bar__history-header">
+                <span>Recent Queries</span>
+                <button className="btn btn--ghost btn--sm" onClick={handleClearHistory} style={{ fontSize: 11 }}>
+                  Clear
+                </button>
+              </div>
+              {history.map((entry, i) => (
+                <div
+                  key={i}
+                  className="query-bar__history-item"
+                  onClick={() => handleRecall(entry)}
+                >
+                  <div className="query-bar__history-query">{summarizeQuery(entry)}</div>
+                  <div className="query-bar__history-time">{formatTimestamp(entry.timestamp)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <button className="btn btn--secondary" onClick={handleReset}>
           Reset
         </button>
@@ -122,6 +258,17 @@ export function QueryBar({ onExecute, onReset, count, loading, connectionId, db,
         <div className="query-bar__count">
           {count.toLocaleString()} result{count !== 1 ? 's' : ''}
         </div>
+      )}
+
+      {showExplain && (
+        <ExplainDialog
+          connectionId={connectionId}
+          db={db}
+          collection={collection}
+          filter={filter}
+          sort={sort}
+          onClose={() => setShowExplain(false)}
+        />
       )}
     </div>
   );

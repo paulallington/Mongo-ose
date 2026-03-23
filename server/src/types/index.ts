@@ -3,6 +3,7 @@ export interface SavedConnection {
   name: string;
   connectionString: string;
   color?: string;
+  group?: string;
   createdAt: string;
 }
 

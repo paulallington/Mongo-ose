@@ -1,5 +1,15 @@
 import type { SavedConnection, DatabaseInfo, CollectionInfo, CollectionStats, IndexInfo, FieldInfo } from '../types/index.js';
 
+export interface ServerInfo {
+  version: string;
+  gitVersion?: string;
+  modules?: string[];
+  os?: string;
+  uptime?: number;
+  connections?: { current: number; available: number; totalCreated: number };
+  storageEngine?: string;
+}
+
 const BASE = '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -33,6 +43,7 @@ export const api = {
   connect: (id: string) => request<void>(`/connections/${id}/connect`, { method: 'POST' }),
   disconnect: (id: string) => request<void>(`/connections/${id}/disconnect`, { method: 'POST' }),
   getConnectionStatus: (id: string) => request<{ connected: boolean }>(`/connections/${id}/status`),
+  getServerInfo: (id: string) => request<ServerInfo>(`/connections/${id}/server-info`),
 
   // Databases & Collections
   getDatabases: (connId: string) =>
@@ -41,6 +52,20 @@ export const api = {
     request<{ collections: CollectionInfo[] }>(`/databases/${connId}/databases/${db}/collections`),
   getCollectionStats: (connId: string, db: string, col: string) =>
     request<CollectionStats>(`/databases/${connId}/databases/${db}/collections/${col}/stats`),
+  createCollection: (connId: string, db: string, name: string) =>
+    request<{ ok: boolean; name: string }>(`/databases/${connId}/databases/${db}/create-collection`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  dropDatabase: (connId: string, db: string) =>
+    request<{ ok: boolean }>(`/databases/${connId}/databases/${db}/drop`, { method: 'DELETE' }),
+  dropCollection: (connId: string, db: string, col: string) =>
+    request<{ ok: boolean }>(`/databases/${connId}/databases/${db}/collections/${col}/drop`, { method: 'DELETE' }),
+  renameCollection: (connId: string, db: string, col: string, newName: string) =>
+    request<{ ok: boolean }>(`/databases/${connId}/databases/${db}/collections/${col}/rename`, {
+      method: 'PUT',
+      body: JSON.stringify({ newName }),
+    }),
 
   // Documents
   findDocuments: (connId: string, db: string, col: string, query: any, signal?: AbortSignal) =>
@@ -72,6 +97,26 @@ export const api = {
     }),
   scanFields: (connId: string, db: string, col: string) =>
     request<{ fields: FieldInfo[] }>(`/documents/${connId}/${db}/${col}/scan-fields`, { method: 'POST' }),
+  explainQuery: (connId: string, db: string, col: string, query: any) =>
+    request<{ explain: any }>(`/documents/${connId}/${db}/${col}/explain`, {
+      method: 'POST',
+      body: JSON.stringify(query),
+    }),
+  updateMany: (connId: string, db: string, col: string, filter: any, update: any) =>
+    request<{ matchedCount: number; modifiedCount: number }>(`/documents/${connId}/${db}/${col}/update-many`, {
+      method: 'PUT',
+      body: JSON.stringify({ filter, update }),
+    }),
+  deleteManyByFilter: (connId: string, db: string, col: string, filter: any) =>
+    request<{ deletedCount: number }>(`/documents/${connId}/${db}/${col}/delete-many`, {
+      method: 'POST',
+      body: JSON.stringify({ filter }),
+    }),
+  findAndReplace: (connId: string, db: string, col: string, field: string, findValue: any, replaceValue: any, filter?: any) =>
+    request<{ matchedCount: number; modifiedCount: number }>(`/documents/${connId}/${db}/${col}/find-replace`, {
+      method: 'POST',
+      body: JSON.stringify({ field, findValue, replaceValue, filter }),
+    }),
 
   // Indexes
   getIndexes: (connId: string, db: string, col: string) =>

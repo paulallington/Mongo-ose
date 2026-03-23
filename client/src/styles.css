@@ -1682,7 +1682,7 @@ body {
 
 .react-contexify__item__content {
   color: var(--text-primary) !important;
-  padding: 5px 14px !important;
+  padding: 8px 14px !important;
   border-radius: 3px !important;
   transition: background 80ms ease !important;
   display: flex !important;
@@ -2124,4 +2124,208 @@ body {
 [data-theme="light"] .vqb__warning {
   background: rgba(237, 108, 2, 0.06);
   border-color: rgba(237, 108, 2, 0.2);
+}
+
+/* ============================================================
+   Explain Plan
+   ============================================================ */
+.explain-summary {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-panel);
+}
+
+.explain-summary__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.explain-summary__badge {
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.explain-summary__badge--warning {
+  background: rgba(255, 167, 38, 0.2);
+  color: var(--accent-warning);
+}
+
+.explain-summary__badge--good {
+  background: rgba(102, 187, 106, 0.2);
+  color: var(--accent-success);
+}
+
+.explain-summary__detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.explain-summary__stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.explain-summary__stats strong {
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   Collection Stats Popup
+   ============================================================ */
+.toolbar__stats--clickable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.toolbar__stats--clickable:hover {
+  color: var(--accent-primary);
+}
+
+.toolbar__stats-extra {
+  color: var(--text-muted);
+}
+
+.toolbar__stats-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px var(--modal-shadow);
+  padding: 10px 14px;
+  z-index: 200;
+  min-width: 200px;
+  font-size: 12px;
+}
+
+.toolbar__stats-popup-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  gap: 12px;
+}
+
+.toolbar__stats-popup-row span {
+  color: var(--text-secondary);
+}
+
+.toolbar__stats-popup-row strong {
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   Tree Groups (Connection Folders)
+   ============================================================ */
+.tree-group__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.tree-group__icon {
+  font-size: 12px;
+}
+
+.tree-group__count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.tree-group__children {
+  /* indent handled by depth param */
+}
+
+/* ============================================================
+   Query History Dropdown
+   ============================================================ */
+.query-bar__history-wrapper {
+  position: relative;
+}
+
+.query-bar__history-dropdown {
+  position: fixed;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px var(--modal-shadow);
+  z-index: 1000;
+  width: 440px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.query-bar__history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.query-bar__history-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.query-bar__history-item:hover {
+  background: var(--bg-hover);
+}
+
+.query-bar__history-item:last-child {
+  border-bottom: none;
+}
+
+.query-bar__history-query {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-bright);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.query-bar__history-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ============================================================
+   Bulk Operations Toolbar
+   ============================================================ */
+.document-viewer__bulk-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* ============================================================
+   Wide Modal (for Bulk Update)
+   ============================================================ */
+.modal--wide {
+  width: 600px;
+  max-width: 90vw;
 }

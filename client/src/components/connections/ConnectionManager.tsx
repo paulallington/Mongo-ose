@@ -13,12 +13,17 @@ export function ConnectionManager({ onClose, editConnection }: ConnectionManager
   const addConnection = useAppStore((s) => s.addConnection);
   const updateConnection = useAppStore((s) => s.updateConnection);
 
+  const connections = useAppStore((s) => s.connections);
   const [name, setName] = useState(editConnection?.name || '');
   const [connectionString, setConnectionString] = useState(
     editConnection?.connectionString || 'mongodb://localhost:27017'
   );
   const [color, setColor] = useState(editConnection?.color || '#4fc3f7');
+  const [group, setGroup] = useState(editConnection?.group || '');
   const [testing, setTesting] = useState(false);
+
+  // Get unique existing groups for autocomplete
+  const existingGroups = [...new Set(connections.map(c => c.group).filter(Boolean))] as string[];
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -59,6 +64,7 @@ export function ConnectionManager({ onClose, editConnection }: ConnectionManager
           name: name.trim(),
           connectionString: connectionString.trim(),
           color,
+          group: group.trim() || undefined,
         });
         updateConnection(editConnection.id, updated);
         toast.success('Connection updated');
@@ -67,7 +73,8 @@ export function ConnectionManager({ onClose, editConnection }: ConnectionManager
           name: name.trim(),
           connectionString: connectionString.trim(),
           color,
-        });
+          group: group.trim() || undefined,
+        } as any);
         addConnection(created);
         toast.success('Connection created');
       }
@@ -112,6 +119,22 @@ export function ConnectionManager({ onClose, editConnection }: ConnectionManager
                 onChange={(e) => setConnectionString(e.target.value)}
                 placeholder="mongodb://localhost:27017"
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Group / Folder (optional)</label>
+              <input
+                className="form-input"
+                value={group}
+                onChange={(e) => setGroup(e.target.value)}
+                placeholder="e.g. Production, Development, Staging"
+                list="connection-groups"
+              />
+              {existingGroups.length > 0 && (
+                <datalist id="connection-groups">
+                  {existingGroups.map(g => <option key={g} value={g} />)}
+                </datalist>
+              )}
             </div>
 
             <div className="form-group">

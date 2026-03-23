@@ -6,6 +6,7 @@ import { api } from '../../api/client.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { ConnectionManager } from '../connections/ConnectionManager.js';
 import { ConfirmDialog } from '../shared/ConfirmDialog.js';
+import { PromptDialog } from '../shared/PromptDialog.js';
 import { ExportDialog } from '../io/ExportDialog.js';
 import { ImportDialog } from '../io/ImportDialog.js';
 import { CopyPasteDialog } from '../transfer/CopyPasteDialog.js';
@@ -29,6 +30,13 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
     title: string;
     message: string;
     onConfirm: () => void;
+  } | null>(null);
+  const [promptDialog, setPromptDialog] = useState<{
+    title: string;
+    label: string;
+    placeholder?: string;
+    defaultValue?: string;
+    onConfirm: (value: string) => void;
   } | null>(null);
   const [exportTarget, setExportTarget] = useState<{ connId: string; db: string; col: string } | null>(null);
   const [importTarget, setImportTarget] = useState<{ connId: string; db: string; col: string } | null>(null);
@@ -98,6 +106,25 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
     await props.loadCollections(node.connectionId, node.dbName!);
   };
 
+  const handleCreateCollection = ({ props }: any) => {
+    const node: TreeNode = props.node;
+    setPromptDialog({
+      title: 'Create Collection',
+      label: `Collection name (in ${node.dbName})`,
+      placeholder: 'new_collection',
+      onConfirm: async (name: string) => {
+        try {
+          await api.createCollection(node.connectionId, node.dbName!, name);
+          toast.success(`Collection "${name}" created`);
+          await props.loadCollections(node.connectionId, node.dbName!);
+        } catch (err: any) {
+          toast.error(`Create collection failed: ${err.message}`);
+        }
+        setPromptDialog(null);
+      },
+    });
+  };
+
   const handleDropDb = ({ props }: any) => {
     const node: TreeNode = props.node;
     setConfirmDialog({
@@ -105,11 +132,16 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
       message: `Are you sure you want to drop database "${node.dbName}"? This action is irreversible and will delete ALL data in this database.`,
       onConfirm: async () => {
         try {
-          await api.findDocuments(node.connectionId, node.dbName!, '', {});
-          // There's no drop database API defined, so we'll show a message
-          toast.error('Drop database is not yet supported via the API');
-        } catch {
-          toast.error('Drop database is not yet supported via the API');
+          await api.dropDatabase(node.connectionId, node.dbName!);
+          toast.success(`Database "${node.dbName}" dropped`);
+          // If viewing something in this db, deselect
+          const state = useAppStore.getState();
+          if (state.selectedConnection === node.connectionId && state.selectedDatabase === node.dbName) {
+            select(node.connectionId);
+          }
+          await props.loadDatabases(node.connectionId);
+        } catch (err: any) {
+          toast.error(`Drop database failed: ${err.message}`);
         }
         setConfirmDialog(null);
       },
@@ -164,6 +196,34 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
     setPasteTarget({ connId: node.connectionId, db: node.dbName!, col: node.name });
   };
 
+  const handleRenameCol = ({ props }: any) => {
+    const node: TreeNode = props.node;
+    setPromptDialog({
+      title: 'Rename Collection',
+      label: 'New name',
+      defaultValue: node.name,
+      onConfirm: async (newName: string) => {
+        try {
+          await api.renameCollection(node.connectionId, node.dbName!, node.name, newName);
+          toast.success(`Collection renamed to "${newName}"`);
+          // If this collection was selected, update selection
+          const state = useAppStore.getState();
+          if (
+            state.selectedConnection === node.connectionId &&
+            state.selectedDatabase === node.dbName &&
+            state.selectedCollection === node.name
+          ) {
+            select(node.connectionId, node.dbName!, newName);
+          }
+          await props.loadCollections(node.connectionId, node.dbName!);
+        } catch (err: any) {
+          toast.error(`Rename failed: ${err.message}`);
+        }
+        setPromptDialog(null);
+      },
+    });
+  };
+
   const handleDropCol = ({ props }: any) => {
     const node: TreeNode = props.node;
     setConfirmDialog({
@@ -171,9 +231,20 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
       message: `Are you sure you want to drop collection "${node.name}"? This action is irreversible and will delete ALL documents.`,
       onConfirm: async () => {
         try {
-          toast.error('Drop collection is not yet supported via the API');
-        } catch {
-          // noop
+          await api.dropCollection(node.connectionId, node.dbName!, node.name);
+          toast.success(`Collection "${node.name}" dropped`);
+          // If this was selected, deselect
+          const state = useAppStore.getState();
+          if (
+            state.selectedConnection === node.connectionId &&
+            state.selectedDatabase === node.dbName &&
+            state.selectedCollection === node.name
+          ) {
+            select(node.connectionId, node.dbName!);
+          }
+          await props.loadCollections(node.connectionId, node.dbName!);
+        } catch (err: any) {
+          toast.error(`Drop collection failed: ${err.message}`);
         }
         setConfirmDialog(null);
       },
@@ -215,6 +286,9 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
 
       {/* Database Context Menu */}
       <Menu id={dbMenuId}>
+        <Item onClick={handleCreateCollection}>
+          <span className="ctx-icon">&#10133;</span> Create Collection
+        </Item>
         <Item onClick={handleRefreshDb}>
           <span className="ctx-icon">&#8635;</span> Refresh
         </Item>
@@ -248,6 +322,9 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
           <span className="ctx-icon">&#128203;</span> Paste Documents {clipboard ? `(${clipboard.documents.length})` : ''}
         </Item>
         <Separator />
+        <Item onClick={handleRenameCol}>
+          <span className="ctx-icon">&#9998;</span> Rename Collection
+        </Item>
         <Item onClick={handleDropCol}>
           <span className="ctx-icon ctx-danger">&#128465;</span>
           <span className="ctx-danger">Drop Collection</span>
@@ -268,6 +345,17 @@ export function TreeContextMenu({ connMenuId, dbMenuId, colMenuId }: TreeContext
           message={confirmDialog.message}
           onConfirm={confirmDialog.onConfirm}
           onCancel={() => setConfirmDialog(null)}
+        />
+      )}
+
+      {promptDialog && (
+        <PromptDialog
+          title={promptDialog.title}
+          label={promptDialog.label}
+          placeholder={promptDialog.placeholder}
+          defaultValue={promptDialog.defaultValue}
+          onConfirm={promptDialog.onConfirm}
+          onCancel={() => setPromptDialog(null)}
         />
       )}
 

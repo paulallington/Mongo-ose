@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useContextMenu } from 'react-contexify';
 import type { TreeNode } from '../../types/index.js';
-import { api } from '../../api/client.js';
+import { api, type ServerInfo } from '../../api/client.js';
 import { useAppStore } from '../../stores/app-store.js';
 import { TreeContextMenu } from './TreeContextMenu.js';
 
@@ -29,6 +29,28 @@ export function DatabaseTree({ onNewConnection }: DatabaseTreeProps) {
   const { show: showConnMenu } = useContextMenu({ id: CONN_MENU_ID });
   const { show: showDbMenu } = useContextMenu({ id: DB_MENU_ID });
   const { show: showColMenu } = useContextMenu({ id: COL_MENU_ID });
+
+  // Server info cache per connection
+  const [serverInfoMap, setServerInfoMap] = useState<Record<string, ServerInfo>>({});
+
+  // Fetch server info when connections become active
+  useEffect(() => {
+    for (const connId of activeConnections) {
+      if (!serverInfoMap[connId]) {
+        api.getServerInfo(connId)
+          .then((info) => setServerInfoMap((prev) => ({ ...prev, [connId]: info })))
+          .catch(() => {});
+      }
+    }
+    // Clean up disconnected
+    setServerInfoMap((prev) => {
+      const next = { ...prev };
+      for (const id of Object.keys(next)) {
+        if (!activeConnections.includes(id)) delete next[id];
+      }
+      return next;
+    });
+  }, [activeConnections]);
 
   const loadDatabases = useCallback(
     async (connId: string) => {
@@ -214,7 +236,9 @@ export function DatabaseTree({ onNewConnection }: DatabaseTreeProps) {
                 isActive ? 'tree-node__status--connected' : 'tree-node__status--disconnected'
               }`}
             >
-              {isActive ? 'connected' : 'disconnected'}
+              {isActive && serverInfoMap[node.connectionId]
+                ? `v${serverInfoMap[node.connectionId].version}`
+                : isActive ? 'connected' : 'disconnected'}
             </span>
           )}
         </div>
@@ -228,9 +252,12 @@ export function DatabaseTree({ onNewConnection }: DatabaseTreeProps) {
     );
   };
 
-  return (
-    <>
-      {treeData.length === 0 ? (
+  // Group connections by folder
+  const connections = useAppStore((s) => s.connections);
+
+  const renderGroupedTree = () => {
+    if (treeData.length === 0) {
+      return (
         <div style={{ padding: '20px 14px', textAlign: 'center' }}>
           <div className="text-muted" style={{ fontSize: 12, marginBottom: 10 }}>
             No connections yet
@@ -239,9 +266,64 @@ export function DatabaseTree({ onNewConnection }: DatabaseTreeProps) {
             + Add Connection
           </button>
         </div>
-      ) : (
-        treeData.map((node) => renderNode(node, 0))
-      )}
+      );
+    }
+
+    // Build group map
+    const groups = new Map<string, TreeNode[]>();
+    const ungrouped: TreeNode[] = [];
+
+    for (const node of treeData) {
+      const conn = connections.find(c => c.id === node.connectionId);
+      const group = conn?.group;
+      if (group) {
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group)!.push(node);
+      } else {
+        ungrouped.push(node);
+      }
+    }
+
+    // If no groups exist, render flat
+    if (groups.size === 0) {
+      return treeData.map((node) => renderNode(node, 0));
+    }
+
+    return (
+      <>
+        {[...groups.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([groupName, nodes]) => (
+            <div key={`group-${groupName}`} className="tree-group">
+              <div className="tree-group__header">
+                <span className="tree-group__icon">{'\uD83D\uDCC1'}</span>
+                <span className="tree-group__name">{groupName}</span>
+                <span className="tree-group__count">{nodes.length}</span>
+              </div>
+              <div className="tree-group__children">
+                {nodes.map((node) => renderNode(node, 1))}
+              </div>
+            </div>
+          ))}
+        {ungrouped.length > 0 && (
+          <>
+            {groups.size > 0 && (
+              <div className="tree-group__header" style={{ marginTop: 4 }}>
+                <span className="tree-group__icon">{'\uD83D\uDCC1'}</span>
+                <span className="tree-group__name">Ungrouped</span>
+                <span className="tree-group__count">{ungrouped.length}</span>
+              </div>
+            )}
+            {ungrouped.map((node) => renderNode(node, groups.size > 0 ? 1 : 0))}
+          </>
+        )}
+      </>
+    );
+  };
+
+  return (
+    <>
+      {renderGroupedTree()}
       <TreeContextMenu
         connMenuId={CONN_MENU_ID}
         dbMenuId={DB_MENU_ID}

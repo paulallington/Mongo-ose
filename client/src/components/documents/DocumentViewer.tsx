@@ -9,6 +9,10 @@ import { DocumentEditor } from './DocumentEditor.js';
 import { DocumentContextMenu } from './DocumentContextMenu.js';
 import { Pagination } from './Pagination.js';
 import { CopyPasteDialog } from '../transfer/CopyPasteDialog.js';
+import { BulkUpdateDialog } from './BulkUpdateDialog.js';
+import { DeleteByFilterDialog } from './DeleteByFilterDialog.js';
+import { FindReplaceDialog } from './FindReplaceDialog.js';
+import { ConfirmDialog } from '../shared/ConfirmDialog.js';
 
 interface DocumentViewerProps {
   connectionId: string;
@@ -47,6 +51,11 @@ export function DocumentViewer({
 
   // Paste dialog
   const [showPaste, setShowPaste] = useState(false);
+  // Bulk operations
+  const [showBulkUpdate, setShowBulkUpdate] = useState(false);
+  const [showDeleteByFilter, setShowDeleteByFilter] = useState(false);
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  const [confirmDeleteIds, setConfirmDeleteIds] = useState<string[] | null>(null);
 
   // Track the context menu target doc
   const contextDocRef = useRef<any>(null);
@@ -198,17 +207,25 @@ export function DocumentViewer({
     [connectionId, db, collection, setClipboard]
   );
 
-  // Keyboard shortcut: Ctrl+V to paste
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Don't fire when typing in inputs/editors
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.closest('.monaco-editor')) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard) {
         e.preventDefault();
         setShowPaste(true);
       }
+      if (e.key === 'Delete' && selectedIds.size > 0) {
+        e.preventDefault();
+        setConfirmDeleteIds(Array.from(selectedIds));
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [clipboard]);
+  }, [clipboard, selectedIds]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -246,6 +263,18 @@ export function DocumentViewer({
               {selectedIds.size} selected
             </span>
           )}
+
+          <div className="document-viewer__bulk-actions">
+            <button className="btn btn--ghost btn--sm" onClick={() => setShowBulkUpdate(true)} title="Bulk Update">
+              Update Many
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={() => setShowDeleteByFilter(true)} title="Delete by Filter">
+              Delete by Filter
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={() => setShowFindReplace(true)} title="Find & Replace">
+              Find & Replace
+            </button>
+          </div>
         </div>
 
         {loading && documents.length === 0 ? (
@@ -331,6 +360,59 @@ export function DocumentViewer({
             setShowPaste(false);
             onRefresh();
           }}
+        />
+      )}
+
+      {showBulkUpdate && (
+        <BulkUpdateDialog
+          connectionId={connectionId}
+          db={db}
+          collection={collection}
+          initialFilter={filter}
+          onClose={() => setShowBulkUpdate(false)}
+          onUpdated={() => {
+            setShowBulkUpdate(false);
+            onRefresh();
+          }}
+        />
+      )}
+
+      {showDeleteByFilter && (
+        <DeleteByFilterDialog
+          connectionId={connectionId}
+          db={db}
+          collection={collection}
+          initialFilter={filter}
+          onClose={() => setShowDeleteByFilter(false)}
+          onDeleted={() => {
+            setShowDeleteByFilter(false);
+            onRefresh();
+          }}
+        />
+      )}
+
+      {showFindReplace && (
+        <FindReplaceDialog
+          connectionId={connectionId}
+          db={db}
+          collection={collection}
+          onClose={() => setShowFindReplace(false)}
+          onReplaced={() => {
+            setShowFindReplace(false);
+            onRefresh();
+          }}
+        />
+      )}
+
+      {confirmDeleteIds && (
+        <ConfirmDialog
+          title="Delete Document(s)"
+          message={`Are you sure you want to delete ${confirmDeleteIds.length} document(s)? This action cannot be undone.`}
+          onConfirm={() => {
+            handleDelete(confirmDeleteIds);
+            setConfirmDeleteIds(null);
+          }}
+          onCancel={() => setConfirmDeleteIds(null)}
         />
       )}
     </>

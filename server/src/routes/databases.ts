@@ -70,4 +70,69 @@ router.get('/:connectionId/databases/:db/collections/:col/stats', async (req: Re
   }
 });
 
+// POST /:connectionId/databases/:db/create-collection - create a new collection
+router.post('/:connectionId/databases/:db/create-collection', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const { name } = req.body;
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ error: 'name is required' });
+      return;
+    }
+    const client = connectionManager.getClient(connectionId);
+    const database = client.db(db);
+    await database.createCollection(name);
+    res.status(201).json({ ok: true, name });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /:connectionId/databases/:db/drop - drop a database
+router.delete('/:connectionId/databases/:db/drop', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const client = connectionManager.getClient(connectionId);
+    await client.db(db).dropDatabase();
+    res.json({ ok: true, dropped: db });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /:connectionId/databases/:db/collections/:col/drop - drop a collection
+router.delete('/:connectionId/databases/:db/collections/:col/drop', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const client = connectionManager.getClient(connectionId);
+    await client.db(db).collection(col).drop();
+    res.json({ ok: true, dropped: col });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /:connectionId/databases/:db/collections/:col/rename - rename a collection
+router.put('/:connectionId/databases/:db/collections/:col/rename', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const { newName } = req.body;
+    if (!newName || typeof newName !== 'string') {
+      res.status(400).json({ error: 'newName is required' });
+      return;
+    }
+    const client = connectionManager.getClient(connectionId);
+    await client.db(db).collection(col).rename(newName);
+    res.json({ ok: true, oldName: col, newName });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

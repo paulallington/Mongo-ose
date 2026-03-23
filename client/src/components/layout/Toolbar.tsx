@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '../../stores/app-store.js';
+import { api } from '../../api/client.js';
 import { DocumentEditor } from '../documents/DocumentEditor.js';
 import { ExportDialog } from '../io/ExportDialog.js';
 import { ImportDialog } from '../io/ImportDialog.js';
+import type { CollectionStats } from '../../types/index.js';
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 
 interface ToolbarProps {
   activeTab: 'documents' | 'indexes';
@@ -20,8 +30,20 @@ export function Toolbar({ activeTab, onTabChange, docCount, onRefresh }: Toolbar
   const [showInsert, setShowInsert] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [stats, setStats] = useState<CollectionStats | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   const connName = connections.find((c) => c.id === selectedConnection)?.name || '';
+
+  useEffect(() => {
+    if (!selectedConnection || !selectedDatabase || !selectedCollection) {
+      setStats(null);
+      return;
+    }
+    api.getCollectionStats(selectedConnection, selectedDatabase, selectedCollection)
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, [selectedConnection, selectedDatabase, selectedCollection]);
 
   return (
     <>
@@ -45,7 +67,27 @@ export function Toolbar({ activeTab, onTabChange, docCount, onRefresh }: Toolbar
         </div>
 
         {docCount !== null && (
-          <span className="toolbar__stats">{docCount.toLocaleString()} docs</span>
+          <span
+            className="toolbar__stats toolbar__stats--clickable"
+            onClick={() => setShowStats(!showStats)}
+            title="Click for collection stats"
+          >
+            {docCount.toLocaleString()} docs
+            {stats && stats.storageSize > 0 && (
+              <span className="toolbar__stats-extra"> &middot; {formatBytes(stats.storageSize)}</span>
+            )}
+            {showStats && stats && (
+              <div className="toolbar__stats-popup">
+                <div className="toolbar__stats-popup-row"><span>Documents:</span><strong>{stats.documentCount.toLocaleString()}</strong></div>
+                <div className="toolbar__stats-popup-row"><span>Storage Size:</span><strong>{formatBytes(stats.storageSize)}</strong></div>
+                <div className="toolbar__stats-popup-row"><span>Avg Doc Size:</span><strong>{formatBytes(stats.avgObjSize)}</strong></div>
+                <div className="toolbar__stats-popup-row"><span>Indexes:</span><strong>{stats.indexCount}</strong></div>
+                {stats.totalIndexSize !== undefined && stats.totalIndexSize > 0 && (
+                  <div className="toolbar__stats-popup-row"><span>Index Size:</span><strong>{formatBytes(stats.totalIndexSize)}</strong></div>
+                )}
+              </div>
+            )}
+          </span>
         )}
 
         <div className="toolbar__spacer" />

@@ -269,4 +269,107 @@ router.post('/:connectionId/:db/:col/scan-fields', async (req: Request, res: Res
   }
 });
 
+// POST /:connectionId/:db/:col/explain - explain a query
+router.post('/:connectionId/:db/:col/explain', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const client = connectionManager.getClient(connectionId);
+    const collection = client.db(db).collection(col);
+
+    const filter = parseEJSON(req.body.filter) ?? {};
+    const sort = (parseEJSON(req.body.sort) ?? {}) as Record<string, 1 | -1>;
+
+    const explanation = await collection
+      .find(filter)
+      .sort(sort)
+      .explain('executionStats');
+
+    res.json({ explain: explanation });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /:connectionId/:db/:col/update-many - update multiple documents
+router.put('/:connectionId/:db/:col/update-many', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const client = connectionManager.getClient(connectionId);
+    const collection = client.db(db).collection(col);
+
+    const filter = parseEJSON(req.body.filter) ?? {};
+    const update = parseEJSON(req.body.update);
+    if (!update) {
+      res.status(400).json({ error: 'update expression is required' });
+      return;
+    }
+
+    const result = await collection.updateMany(filter, update as any);
+    res.json({
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /:connectionId/:db/:col/delete-many - delete documents matching a filter
+router.post('/:connectionId/:db/:col/delete-many', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const client = connectionManager.getClient(connectionId);
+    const collection = client.db(db).collection(col);
+
+    const filter = parseEJSON(req.body.filter);
+    if (!filter || Object.keys(filter).length === 0) {
+      res.status(400).json({ error: 'A non-empty filter is required to prevent accidental deletion of all documents' });
+      return;
+    }
+
+    const result = await collection.deleteMany(filter);
+    res.json({ deletedCount: result.deletedCount });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /:connectionId/:db/:col/find-replace - find and replace values across documents
+router.post('/:connectionId/:db/:col/find-replace', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const connectionId = req.params.connectionId as string;
+    const db = req.params.db as string;
+    const col = req.params.col as string;
+    const client = connectionManager.getClient(connectionId);
+    const collection = client.db(db).collection(col);
+
+    const { field, findValue, replaceValue, filter: extraFilter } = req.body;
+    if (!field || findValue === undefined || replaceValue === undefined) {
+      res.status(400).json({ error: 'field, findValue, and replaceValue are required' });
+      return;
+    }
+
+    // Build match filter: field must equal findValue, optionally combined with extra filter
+    const matchFilter: Record<string, unknown> = { [field]: findValue };
+    if (extraFilter) {
+      const parsedExtra = parseEJSON(extraFilter);
+      if (parsedExtra) Object.assign(matchFilter, parsedExtra);
+    }
+
+    const result = await collection.updateMany(matchFilter, { $set: { [field]: replaceValue } });
+    res.json({
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
