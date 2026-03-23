@@ -3,13 +3,10 @@ import path from 'path';
 import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const isPkg = !!(process as any).pkg;
 
-// When packaged as exe, data dir lives next to the executable (writable).
-// In development, it's at server/data/.
-const dataDir = isPkg
-  ? path.join(path.dirname(process.execPath), 'data')
-  : path.resolve(__dirname, '..', 'data');
+// In Electron, paths are set via env vars. In dev, use local paths.
+const dataDir = process.env.MONGOOSE_DATA
+  || path.resolve(__dirname, '..', 'data');
 
 // Ensure data dir exists with a default connections.json
 if (!fs.existsSync(dataDir)) {
@@ -20,10 +17,8 @@ if (!fs.existsSync(connectionsFile)) {
   fs.writeFileSync(connectionsFile, '[]');
 }
 
-// When packaged, client dist is embedded in snapshot as 'public/' next to the entry point.
-const clientDist = isPkg
-  ? path.join(__dirname, 'public')
-  : path.resolve(__dirname, '..', '..', 'client', 'dist');
+const clientDist = process.env.MONGOOSE_CLIENT_DIST
+  || path.resolve(__dirname, '..', '..', 'client', 'dist');
 
 export const config = {
   port: 3001,

@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { connectionManager } from './services/connection-manager.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -13,8 +12,6 @@ import indexesRouter from './routes/indexes.js';
 import transferRouter from './routes/transfer.js';
 import exportRouter from './routes/export.js';
 import importRouter from './routes/import.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
@@ -50,24 +47,16 @@ app.get('*', (_req, res, next) => {
 // Error handler (must be after all routes)
 app.use(errorHandler);
 
-const server = app.listen(config.port, async () => {
-  const url = `http://localhost:${config.port}`;
-  console.log(`Mongo-ose server running on ${url}`);
-
-  // Auto-open browser unless --no-open flag is passed
-  if (!process.argv.includes('--no-open')) {
-    const { execFile } = await import('child_process');
-    execFile('cmd', ['/c', 'start', '', url]);
-  }
+export const server = app.listen(config.port, () => {
+  console.log(`Mongo-ose server running on http://localhost:${config.port}`);
 });
 
 // Graceful shutdown
-async function shutdown() {
+export async function shutdown() {
   console.log('\nShutting down...');
   await connectionManager.destroy();
   server.close(() => {
     console.log('Server closed.');
-    process.exit(0);
   });
 }
 

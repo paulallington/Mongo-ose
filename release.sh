@@ -46,19 +46,17 @@ git push
 git push --tags
 echo "==> Pushed to origin"
 
-# Build exe
-echo "==> Building standalone exe..."
+# Build Electron installer
+echo "==> Building Electron installer..."
 npm run package
 echo "==> Build complete"
 
-# Build installer
-ISCC="/c/Users/paul/AppData/Local/Programs/Inno Setup 6/ISCC.exe"
-echo "==> Building Windows installer..."
-"$ISCC" //DAppVersion=${VERSION} scripts/installer.iss
-echo "==> Installer built"
-
-# Create GitHub release and upload installer
-SETUP="release/mongo-ose-setup.exe"
+# Find the generated installer (exclude uninstaller stubs)
+SETUP=$(ls release/*Setup*.exe 2>/dev/null | grep -v __uninstaller | head -1)
+if [ -z "$SETUP" ]; then
+  echo "ERROR: No installer found in release/"
+  exit 1
+fi
 
 echo "==> Creating GitHub release v${VERSION}..."
 gh release create "v${VERSION}" \
