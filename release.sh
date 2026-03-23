@@ -51,14 +51,20 @@ echo "==> Building standalone exe..."
 npm run package
 echo "==> Build complete"
 
-# Create GitHub release and upload exe
-EXE="release/mongo-ose.exe"
+# Build installer
+ISCC="/c/Users/paul/AppData/Local/Programs/Inno Setup 6/ISCC.exe"
+echo "==> Building Windows installer..."
+"$ISCC" //DAppVersion=${VERSION} scripts/installer.iss
+echo "==> Installer built"
+
+# Create GitHub release and upload installer
+SETUP="release/mongo-ose-setup.exe"
 
 echo "==> Creating GitHub release v${VERSION}..."
 gh release create "v${VERSION}" \
   --title "Mongo-ose v${VERSION}" \
   --generate-notes \
-  "$EXE"
+  "$SETUP"
 
 echo ""
 echo "==> Released Mongo-ose v${VERSION}"
