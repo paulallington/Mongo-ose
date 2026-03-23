@@ -56,8 +56,8 @@ const server = app.listen(config.port, async () => {
 
   // Auto-open browser unless --no-open flag is passed
   if (!process.argv.includes('--no-open')) {
-    const open = (await import('open')).default;
-    open(url);
+    const { execFile } = await import('child_process');
+    execFile('cmd', ['/c', 'start', '', url]);
   }
 });
 
