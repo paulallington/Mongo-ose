@@ -12,7 +12,7 @@ export function Sidebar() {
     <>
       <div className="sidebar-header">
         <div className="sidebar-header__title">
-          <span className="sidebar-header__title-icon">&#9671;</span>
+          <img src={theme === 'dark' ? '/logo-small-light.png' : '/logo-small.png'} alt="Mongo-ose" className="sidebar-header__logo" />
           Mongo-ose
         </div>
         <div className="sidebar-header__actions">

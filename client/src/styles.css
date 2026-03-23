@@ -232,9 +232,10 @@ body {
   gap: 7px;
 }
 
-.sidebar-header__title-icon {
-  color: var(--accent-primary);
-  font-size: 16px;
+.sidebar-header__logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .sidebar-header__actions {
@@ -1399,9 +1400,10 @@ body {
   color: var(--text-muted);
 }
 
-.welcome__icon {
-  font-size: 48px;
-  opacity: 0.3;
+.welcome__logo {
+  width: 200px;
+  height: auto;
+  opacity: 0.6;
 }
 
 .welcome__title {

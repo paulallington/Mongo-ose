@@ -10,6 +10,7 @@ export function ContentArea() {
   const selectedConnection = useAppStore((s) => s.selectedConnection);
   const selectedDatabase = useAppStore((s) => s.selectedDatabase);
   const selectedCollection = useAppStore((s) => s.selectedCollection);
+  const theme = useAppStore((s) => s.theme);
 
   const [activeTab, setActiveTab] = useState<'documents' | 'indexes'>('documents');
   const [docCount, setDocCount] = useState<number | null>(null);
@@ -45,7 +46,7 @@ export function ContentArea() {
   if (!selectedConnection || !selectedDatabase || !selectedCollection) {
     return (
       <div className="welcome">
-        <div className="welcome__icon">&#9671;</div>
+        <img src={theme === 'dark' ? '/logo-light.png' : '/logo-transparent.png'} alt="Mongo-ose" className="welcome__logo" />
         <div className="welcome__title">Mongo-ose</div>
         <div className="welcome__subtitle">
           Select a collection from the sidebar to browse documents, manage indexes, and more.
