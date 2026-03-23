@@ -80,11 +80,12 @@ console.log('Packaging executable...');
 execFileSync('npx', ['pkg', '.'], { cwd: RELEASE, stdio: 'inherit', shell: true });
 
 // 6. Stamp the mongoose icon onto the exe
-console.log('Setting exe icon...');
-const { rcedit } = await import('rcedit');
-await rcedit(path.join(RELEASE, 'mongo-ose.exe'), {
-  icon: path.join(ROOT, 'client', 'public', 'favicon.ico'),
-});
+// NOTE: rcedit corrupts pkg snapshots — skip for now
+// console.log('Setting exe icon...');
+// const { rcedit } = await import('rcedit');
+// await rcedit(path.join(RELEASE, 'mongo-ose.exe'), {
+//   icon: path.join(ROOT, 'client', 'public', 'favicon.ico'),
+// });
 
 // 7. Clean up intermediate files
 fs.rmSync(path.join(RELEASE, 'server.cjs'));
